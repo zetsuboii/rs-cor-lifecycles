@@ -40,6 +40,7 @@ impl<'a> StrSplit<'a> {
   }
 }
 
+/*
 impl<'a> Iterator for StrSplit<'a> {
   // Item will live as long as the remainder, we have to specify that when defining it
   type Item = &'a str;
@@ -48,11 +49,40 @@ impl<'a> Iterator for StrSplit<'a> {
   fn next(&mut self) -> Option<Self::Item> {
     
     // There's something inside the remainder
+    // ref mut keyword creates a &mut out of self.remainder
     if let Some(ref mut remainder) = self.remainder {
       // There's a next delimiter: Find the next remainder
-      if let Some(next_deli) = remainder.find(self.delimiter) {
-        let until_delimiter = &'remainder[..next_delim];
-        *remainder = &'remainder[(next_delim + self.delimiter.len())..];
+      if let Some(next_delim) = remainder.find(self.delimiter) {
+        let until_delimiter = &remainder[..next_delim];
+        *remainder = &remainder[(next_delim + self.delimiter.len())..];
+        Some(until_delimiter)
+      // There's no delimiter left: Find what's remaining
+      } else {
+        self.remainder.take()
+      }
+    } else {
+      None
+    }
+  }
+}
+*/
+
+impl<'a> Iterator for StrSplit<'a> {
+  // Item will live as long as the remainder, we have to specify that when defining it
+  type Item = &'a str;
+
+  // This is the only thing we need for an iterator
+  fn next(&mut self) -> Option<Self::Item> {
+    
+    // There's something inside the remainder
+    // ref mut keyword creates a &mut out of self.remainder
+    // If we haven't used it, we'd have a new variable named remainder and couldn't
+    // modify the original one
+    if let Some(ref mut remainder) = self.remainder {
+      // There's a next delimiter: Find the next remainder
+      if let Some(next_delim) = remainder.find(self.delimiter) {
+        let until_delimiter = &remainder[..next_delim];
+        *remainder = &remainder[(next_delim + self.delimiter.len())..];
         Some(until_delimiter)
       // There's no delimiter left: Find what's remaining
       } else {
@@ -69,9 +99,8 @@ fn it_works() {
   let haystack = "a b c d e";
   let letters = StrSplit::new(haystack, " ");   
 
-  // If iterators are of same type, they can be compared. Lengths and each elements
-  // is tested against each other
-  assert!(letters.eq(vec!["a", "b", "c", "d", "e"].into_iter()));
+  let letters: Vec<_> = letters.collect();
+  assert_eq!(letters, vec!["a", "b", "c", "d", "e"]);
 }
 
 
