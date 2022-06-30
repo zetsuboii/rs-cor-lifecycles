@@ -12,8 +12,9 @@
 
 // When we are defining a generic type we can use <> right after the name we're defining
 // be it a method, a struct or an enum
+#[derive(Debug)]
 pub struct StrSplit<'a> {
-  remainder: &'a str,
+  remainder: Option<&'a str>,
   delimiter: &'a str
 }
 
@@ -33,7 +34,7 @@ impl<'a> StrSplit<'a> {
   pub fn new (haystack: &'a str, delimiter: &'a str) -> Self {
     // No need to use StrSplit for type of self
     Self {
-      remainder: haystack, 
+      remainder: Some(haystack), 
       delimiter
     }
   }
@@ -45,25 +46,20 @@ impl<'a> Iterator for StrSplit<'a> {
 
   // This is the only thing we need for an iterator
   fn next(&mut self) -> Option<Self::Item> {
+    // next_delim is of type usize because &str.find returns the byte index of the
+    // start of the searched pattern 
     if let Some(next_delim) = self.remainder.find(self.delimiter) {
-      // oh my, is this legal?
-      // --re I thought this was a string and freaked out but next_delim is the byte
-      // index so it's all cool :)
       let until_delimiter = &self.remainder[..next_delim];
-      // next_delim is of type usize because &str.find returns the byte index of the
-      // searched pattern 
       self.remainder = &self.remainder[(next_delim + self.delimiter.len())..];
       Some(until_delimiter)
-    } else if self.remainder.is_empty() {
-      // TODO
-      None 
-    } else {
 
-      // Return the last partition
-      let rest = self.remainder;
-      // Now the remainder is empty
-      self.remainder = &[];
-      Some(rest)
+    // This works for the case where there are no delimiters left, but we still have
+    // some remainder
+    } else if let Some(remainder) = self.remainder.take(){
+      Some(remainder)
+    // Otherwise return none as we don't have any delimiter or a remainder
+    } else {
+      None
     }
   }
 }
@@ -75,7 +71,16 @@ fn it_works() {
 
   // If iterators are of same type, they can be compared. Lengths and each elements
   // is tested against each other
-  assert_eq!(letters, vec!["a", "b", "c", "d", "e"].into_iter());
+  assert!(letters.eq(vec!["a", "b", "c", "d", "e"].into_iter()));
 }
 
 
+#[test]
+fn tail() {
+  let haystack = "a b c d ";
+  let letters = StrSplit::new(haystack, " ");   
+
+  // If iterators are of same type, they can be compared. Lengths and each elements
+  // is tested against each other
+  assert!(letters.eq(vec!["a", "b", "c", "d", ""].into_iter()));
+}
