@@ -1,5 +1,5 @@
 // Using deny instead of warn may break the application in future Rust versions
-// #![warn(missing_debug_implementations, rust_2018_idioms, missing_docs)]
+#![warn(missing_debug_implementations, rust_2018_idioms, missing_docs)]
 
 // 'a here is a generic way to say "This variable lives for this long".
 // Giving both remainder and delimiter the same lifetime specifier, we implicitly
@@ -13,15 +13,15 @@
 // When we are defining a generic type we can use <> right after the name we're defining
 // be it a method, a struct or an enum
 #[derive(Debug)]
-pub struct StrSplit<'a, 'b> {
-  remainder: Option<&'a str>,
-  delimiter: &'b str,
+pub struct StrSplit<'hs, 'dm> {
+  remainder: Option<&'hs str>,
+  delimiter: &'dm str,
 }
 
 // Implementations are for concerete types so `impl StrSplit<'a>` mean there's a literal
 // type named `StrSplit<'a>`. In order to have generic lifetimes for impl's we have to
 // define the lifetime after `impl` keyword
-impl<'a, 'b> StrSplit<'a, 'b> {
+impl<'hs, 'dm> StrSplit<'hs, 'dm> {
   // 'haystack' is what we are splitting
   // 'delimiter' is by what we are splitting
 
@@ -31,7 +31,7 @@ impl<'a, 'b> StrSplit<'a, 'b> {
   // If it comes as confusing, think about the underlying string and the desired effect
   // of StrSplit on it, should it deallocate the string as it is dropped, or is the
   // lifetime of the string might be longer than the StrSplit?
-  pub fn new(haystack: &'a str, delimiter: &'b str) -> Self {
+  pub fn new(haystack: &'hs str, delimiter: &'dm str) -> Self {
     // No need to use StrSplit for type of self
     Self {
       remainder: Some(haystack),
@@ -40,9 +40,9 @@ impl<'a, 'b> StrSplit<'a, 'b> {
   }
 }
 
-impl<'a, 'b> Iterator for StrSplit<'a, 'b> {
+impl<'hs, 'dm> Iterator for StrSplit<'hs, 'dm> {
   // Item will live as long as the remainder, we have to specify that when defining it
-  type Item = &'a str;
+  type Item = &'hs str;
 
   // This is the only thing we need for an iterator
   fn next(&mut self) -> Option<Self::Item> {
