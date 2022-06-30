@@ -48,21 +48,22 @@ pub trait Delimiter {
 impl Delimiter for char {
   fn find_next(&self, s: &str) -> Option<(usize, usize)> {
     s.char_indices()
-      .position(|(i,c)| c == *self)
-      .map(|i| (i, i+1))
+      .position(|(i, c)| c == *self)
+      .map(|i| (i, i + self.len_utf8()))
   }
 }
 
 impl Delimiter for &str {
   fn find_next(&self, s: &str) -> Option<(usize, usize)> {
-    s.find(*self).map(|start| (start, start+self.len()))
+    s.find(*self).map(|start| (start, start + self.len()))
   }
 }
 
-// We can use '_ as we won't need delimiter's lifetime in the code, and it can be 
+// We can use '_ as we won't need delimiter's lifetime in the code, and it can be
 // inferred
 impl<'hs, D> Iterator for StrSplit<'hs, D>
-where D: Delimiter
+where
+  D: Delimiter,
 {
   // Item will live as long as the remainder, we have to specify that when defining it
   type Item = &'hs str;
