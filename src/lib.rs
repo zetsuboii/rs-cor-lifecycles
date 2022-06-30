@@ -40,33 +40,6 @@ impl<'a> StrSplit<'a> {
   }
 }
 
-/*
-impl<'a> Iterator for StrSplit<'a> {
-  // Item will live as long as the remainder, we have to specify that when defining it
-  type Item = &'a str;
-
-  // This is the only thing we need for an iterator
-  fn next(&mut self) -> Option<Self::Item> {
-    
-    // There's something inside the remainder
-    // ref mut keyword creates a &mut out of self.remainder
-    if let Some(ref mut remainder) = self.remainder {
-      // There's a next delimiter: Find the next remainder
-      if let Some(next_delim) = remainder.find(self.delimiter) {
-        let until_delimiter = &remainder[..next_delim];
-        *remainder = &remainder[(next_delim + self.delimiter.len())..];
-        Some(until_delimiter)
-      // There's no delimiter left: Find what's remaining
-      } else {
-        self.remainder.take()
-      }
-    } else {
-      None
-    }
-  }
-}
-*/
-
 impl<'a> Iterator for StrSplit<'a> {
   // Item will live as long as the remainder, we have to specify that when defining it
   type Item = &'a str;
@@ -78,18 +51,17 @@ impl<'a> Iterator for StrSplit<'a> {
     // ref mut keyword creates a &mut out of self.remainder
     // If we haven't used it, we'd have a new variable named remainder and couldn't
     // modify the original one
-    if let Some(ref mut remainder) = self.remainder {
-      // There's a next delimiter: Find the next remainder
-      if let Some(next_delim) = remainder.find(self.delimiter) {
-        let until_delimiter = &remainder[..next_delim];
-        *remainder = &remainder[(next_delim + self.delimiter.len())..];
-        Some(until_delimiter)
-      // There's no delimiter left: Find what's remaining
-      } else {
-        self.remainder.take()
-      }
-    } else {
-      None
+    // ? operator returns None if Option is None, otherwise returns what's inside
+    // Without `as_mut` it would return a copy of the remainder 
+    let remainder = self.remainder.as_mut()?;
+    
+    if let Some(next_delim) = remainder.find(self.delimiter) {
+      let until_delimiter = &remainder[..next_delim];
+      *remainder = &remainder[(next_delim + self.delimiter.len())..];
+      Some(until_delimiter)
+    }
+    else {
+      self.remainder.take()
     }
   }
 }
@@ -101,6 +73,14 @@ fn it_works() {
 
   let letters: Vec<_> = letters.collect();
   assert_eq!(letters, vec!["a", "b", "c", "d", "e"]);
+}
+
+fn main() {
+  let haystack = "a b c d e";
+  let letters = StrSplit::new(haystack, " ");   
+
+  let letters: Vec<_> = letters.collect();
+  println!("{:?}", letters);
 }
 
 
