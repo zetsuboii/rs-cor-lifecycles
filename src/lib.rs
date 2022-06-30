@@ -46,18 +46,18 @@ impl<'a> Iterator for StrSplit<'a> {
 
   // This is the only thing we need for an iterator
   fn next(&mut self) -> Option<Self::Item> {
-    // next_delim is of type usize because &str.find returns the byte index of the
-    // start of the searched pattern 
-    if let Some(next_delim) = self.remainder.find(self.delimiter) {
-      let until_delimiter = &self.remainder[..next_delim];
-      self.remainder = &self.remainder[(next_delim + self.delimiter.len())..];
-      Some(until_delimiter)
-
-    // This works for the case where there are no delimiters left, but we still have
-    // some remainder
-    } else if let Some(remainder) = self.remainder.take(){
-      Some(remainder)
-    // Otherwise return none as we don't have any delimiter or a remainder
+    
+    // There's something inside the remainder
+    if let Some(ref mut remainder) = self.remainder {
+      // There's a next delimiter: Find the next remainder
+      if let Some(next_deli) = remainder.find(self.delimiter) {
+        let until_delimiter = &'remainder[..next_delim];
+        *remainder = &'remainder[(next_delim + self.delimiter.len())..];
+        Some(until_delimiter)
+      // There's no delimiter left: Find what's remaining
+      } else {
+        self.remainder.take()
+      }
     } else {
       None
     }
