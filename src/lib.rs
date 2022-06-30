@@ -13,15 +13,15 @@
 // When we are defining a generic type we can use <> right after the name we're defining
 // be it a method, a struct or an enum
 #[derive(Debug)]
-pub struct StrSplit<'hs, 'dm> {
+pub struct StrSplit<'hs, D> {
   remainder: Option<&'hs str>,
-  delimiter: &'dm str,
+  delimiter: D,
 }
 
 // Implementations are for concerete types so `impl StrSplit<'a>` mean there's a literal
 // type named `StrSplit<'a>`. In order to have generic lifetimes for impl's we have to
 // define the lifetime after `impl` keyword
-impl<'hs, 'dm> StrSplit<'hs, 'dm> {
+impl<'hs, D> StrSplit<'hs, D> {
   // 'haystack' is what we are splitting
   // 'delimiter' is by what we are splitting
 
@@ -31,7 +31,7 @@ impl<'hs, 'dm> StrSplit<'hs, 'dm> {
   // If it comes as confusing, think about the underlying string and the desired effect
   // of StrSplit on it, should it deallocate the string as it is dropped, or is the
   // lifetime of the string might be longer than the StrSplit?
-  pub fn new(haystack: &'hs str, delimiter: &'dm str) -> Self {
+  pub fn new(haystack: &'hs str, delimiter: D) -> Self {
     // No need to use StrSplit for type of self
     Self {
       remainder: Some(haystack),
@@ -40,7 +40,27 @@ impl<'hs, 'dm> StrSplit<'hs, 'dm> {
   }
 }
 
-impl<'hs, 'dm> Iterator for StrSplit<'hs, 'dm> {
+pub trait Delimiter {
+  /// Finds self in the string s and returns where it starts and where it ends
+  fn find_next(&self, s: &str) -> Option<(usize, usize)>;
+}
+
+impl Delimiter for char {
+  fn find_next(&self, s: &str) -> Option<(usize, usize)> {
+    for (i, ch) in s.chars().enumerate() {
+      if ch == *self {
+        return Some((i, i+1))
+      }
+    }     
+    None
+  }
+}
+
+// We can use '_ as we won't need delimiter's lifetime in the code, and it can be 
+// inferred
+impl<'hs, D> Iterator for StrSplit<'hs, D>
+where D: Delimiter
+{
   // Item will live as long as the remainder, we have to specify that when defining it
   type Item = &'hs str;
 
@@ -54,9 +74,9 @@ impl<'hs, 'dm> Iterator for StrSplit<'hs, 'dm> {
     // Without `as_mut` it would return a copy of the remainder
     let remainder = self.remainder.as_mut()?;
 
-    if let Some(next_delim) = remainder.find(self.delimiter) {
-      let until_delimiter = &remainder[..next_delim];
-      *remainder = &remainder[(next_delim + self.delimiter.len())..];
+    if let Some((start, finish)) = self.delimiter.find_next(&remainder) {
+      let until_delimiter = &remainder[..start];
+      *remainder = &remainder[finish..];
       Some(until_delimiter)
     } else {
       self.remainder.take()
@@ -64,9 +84,9 @@ impl<'hs, 'dm> Iterator for StrSplit<'hs, 'dm> {
   }
 }
 
-fn until_char(s: &str, c: char) -> &str {
-  let c_str: String = format!("{}", c);
-  StrSplit::new(s, &c_str)
+fn until_char(s: &str, c: char) -> &'_ str {
+  // let c_str: String = format!("{}", c);
+  StrSplit::new(s, c)
     .next()
     .expect("StrSplit always returns at least one result")
 }
@@ -80,7 +100,7 @@ fn until_char_works() {
 #[test]
 fn it_works() {
   let haystack = "a b c d e";
-  let letters = StrSplit::new(haystack, " ");
+  let letters = StrSplit::new(haystack, ' ');
 
   let letters: Vec<_> = letters.collect();
   assert_eq!(letters, vec!["a", "b", "c", "d", "e"]);
@@ -88,7 +108,7 @@ fn it_works() {
 
 fn main() {
   let haystack = "a b c d e";
-  let letters = StrSplit::new(haystack, " ");
+  let letters = StrSplit::new(haystack, ' ');
 
   let letters: Vec<_> = letters.collect();
   println!("{:?}", letters);
@@ -97,7 +117,7 @@ fn main() {
 #[test]
 fn tail() {
   let haystack = "a b c d ";
-  let letters = StrSplit::new(haystack, " ");
+  let letters = StrSplit::new(haystack, ' ');
 
   // If iterators are of same type, they can be compared. Lengths and each elements
   // is tested against each other
