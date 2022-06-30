@@ -1,5 +1,5 @@
 // Using deny instead of warn may break the application in future Rust versions
-#![warn(missing_debug_implementations, rust_2018_idioms, missing_docs)]
+// #![warn(missing_debug_implementations, rust_2018_idioms, missing_docs)]
 
 // 'a here is a generic way to say "This variable lives for this long".
 // Giving both remainder and delimiter the same lifetime specifier, we implicitly
@@ -64,6 +64,20 @@ impl<'a> Iterator for StrSplit<'a> {
       self.remainder.take()
     }
   }
+}
+
+fn until_char(s: &str, c: char) -> Option<&str> {
+  if let Some(c_idx) = s.find(c) {
+    Some(&s[..c_idx])
+  } else {
+    None
+  }
+}
+
+#[test]
+fn until_char_works() {
+  let haystack = "abcde";
+  assert_eq!(until_char(haystack, 'c'), Some("ab"));  
 }
 
 #[test]
