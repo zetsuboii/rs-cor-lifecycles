@@ -47,12 +47,15 @@ pub trait Delimiter {
 
 impl Delimiter for char {
   fn find_next(&self, s: &str) -> Option<(usize, usize)> {
-    for (i, ch) in s.chars().enumerate() {
-      if ch == *self {
-        return Some((i, i+1))
-      }
-    }     
-    None
+    s.char_indices()
+      .position(|(i,c)| c == *self)
+      .map(|i| (i, i+1))
+  }
+}
+
+impl Delimiter for &str {
+  fn find_next(&self, s: &str) -> Option<(usize, usize)> {
+    s.find(*self).map(|start| (start, start+self.len()))
   }
 }
 
@@ -74,9 +77,9 @@ where D: Delimiter
     // Without `as_mut` it would return a copy of the remainder
     let remainder = self.remainder.as_mut()?;
 
-    if let Some((start, finish)) = self.delimiter.find_next(&remainder) {
-      let until_delimiter = &remainder[..start];
-      *remainder = &remainder[finish..];
+    if let Some((delim_start, delim_end)) = self.delimiter.find_next(&remainder) {
+      let until_delimiter = &remainder[..delim_start];
+      *remainder = &remainder[delim_end..];
       Some(until_delimiter)
     } else {
       self.remainder.take()
@@ -85,7 +88,6 @@ where D: Delimiter
 }
 
 fn until_char(s: &str, c: char) -> &'_ str {
-  // let c_str: String = format!("{}", c);
   StrSplit::new(s, c)
     .next()
     .expect("StrSplit always returns at least one result")
@@ -100,24 +102,24 @@ fn until_char_works() {
 #[test]
 fn it_works() {
   let haystack = "a b c d e";
-  let letters = StrSplit::new(haystack, ' ');
+  let letters = StrSplit::new(haystack, " ");
 
   let letters: Vec<_> = letters.collect();
   assert_eq!(letters, vec!["a", "b", "c", "d", "e"]);
 }
 
-fn main() {
+#[test]
+fn empty() {
   let haystack = "a b c d e";
-  let letters = StrSplit::new(haystack, ' ');
+  let letters = StrSplit::new(haystack, ",");
 
-  let letters: Vec<_> = letters.collect();
-  println!("{:?}", letters);
+  assert_eq!(letters.collect::<Vec<_>>(), vec![haystack]);
 }
 
 #[test]
 fn tail() {
   let haystack = "a b c d ";
-  let letters = StrSplit::new(haystack, ' ');
+  let letters = StrSplit::new(haystack, " ");
 
   // If iterators are of same type, they can be compared. Lengths and each elements
   // is tested against each other
